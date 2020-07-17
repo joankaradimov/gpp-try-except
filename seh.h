@@ -1,14 +1,19 @@
 #include <Windows.h>
 
-#define __try                                                        \
-{                                                                    \
-    __label__ l_start, l_end, l_handler, l_setup_handler, l_seh_end; \
-    goto l_setup_handler;                                            \
-    l_start:
-
 // TODO: implement for x86 32 bit
 
 #if defined(__x86_64)
+
+#define __try                                                       \
+{                                                                   \
+    __label__ l_start, l_end, l_handler, l_seh_end;                 \
+    __asm__ __volatile__ goto(                                      \
+        ".seh_handler __C_specific_handler, @except\n\t"            \
+        ".seh_handlerdata\n\t"                                      \
+        ".long 1\n\t"                                               \
+        ".rva %l[l_start], %l[l_end], %l[l_handler], %l[l_end]\n\t" \
+        ".text" :::: l_start, l_end, l_handler);                    \
+    l_start:
 
 #define __except(filter)                                                  \
     goto l_seh_end;                                                       \
@@ -29,24 +34,15 @@
             "pop %%rbp\n\t"                                               \
             "ret" :: [result] "r"(result) : "%eax");                      \
     }                                                                     \
-    l_setup_handler:                                                      \
-    __asm__ __volatile__ goto(                                            \
-        ".seh_handler __C_specific_handler, @except\n\t"                  \
-        ".seh_handlerdata\n\t"                                            \
-        ".long 1\n\t"                                                     \
-        ".rva %l[l_start], %l[l_end], %l[l_handler], %l[l_end]\n\t"       \
-        ".text" :::: l_start, l_end, l_handler);                          \
-    goto l_start;                                                         \
     l_end:
 
 #else
 
-#define __except(filter) \
-    goto l_seh_end;      \
-    l_handler:           \
-    l_setup_handler:     \
-    goto l_start;        \
-    l_end:
+#define __try       \
+{                   \
+    goto l_seh_end:
+
+#define __except(filter)
 
 #endif
 
