@@ -53,7 +53,7 @@ if (exception_occured)
 
 #endif
 
-#define __leave exception_occured = false; goto l_block; // TODO
+#define __leave exception_occured = false; goto l_block;
 
 #define _try __try
 #define _except __except
