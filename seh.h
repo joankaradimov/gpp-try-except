@@ -2,11 +2,13 @@
 
 // TODO: implement for x86 32 bit
 
+bool exception_occured;
+
 #if defined(__x86_64)
 
 #define __try                                                       \
 {                                                                   \
-    __label__ l_start, l_end, l_handler, l_seh_end;                 \
+    __label__ l_start, l_end, l_handler, l_block;                   \
     __asm__ __volatile__ goto(                                      \
         ".seh_handler __C_specific_handler, @except\n\t"            \
         ".seh_handlerdata\n\t"                                      \
@@ -16,7 +18,8 @@
     l_start:
 
 #define __except(filter)                                                  \
-    goto l_seh_end;                                                       \
+    exception_occured = false;                                            \
+    goto l_block;                                                         \
     l_handler:                                                            \
     {                                                                     \
         EXCEPTION_POINTERS *ep;                                           \
@@ -34,7 +37,11 @@
             "pop %%rbp\n\t"                                               \
             "ret" :: [result] "r"(result) : "%eax");                      \
     }                                                                     \
-    l_end:
+    l_end:                                                                \
+    exception_occured = true;                                             \
+    l_block:;                                                             \
+}                                                                         \
+if (exception_occured)
 
 #else
 
@@ -46,10 +53,7 @@
 
 #endif
 
-#define __except_end l_seh_end: ; \
-}
-
-#define __leave goto l_seh_end
+#define __leave exception_occured = false; goto l_block; // TODO
 
 #define _try __try
 #define _except __except
