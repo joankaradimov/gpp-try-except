@@ -6,20 +6,20 @@ bool exception_occured;
 
 #if defined(__x86_64)
 
-#define __try                                                       \
-{                                                                   \
-    __label__ l_start, l_end, l_handler, l_block;                   \
-    __asm__ __volatile__ goto(                                      \
-        ".seh_handler __C_specific_handler, @except\n\t"            \
-        ".seh_handlerdata\n\t"                                      \
-        ".long 1\n\t"                                               \
-        ".rva %l[l_start], %l[l_end], %l[l_handler], %l[l_end]\n\t" \
-        ".text" :::: l_start, l_end, l_handler);                    \
+#define __try                                                         \
+{                                                                     \
+    __label__ l_start, l_end, l_handler, l_block, l_skip_block;       \
+    __asm__ __volatile__ goto(                                        \
+        ".seh_handler __C_specific_handler, @except\n\t"              \
+        ".seh_handlerdata\n\t"                                        \
+        ".long 1\n\t"                                                 \
+        ".rva %l[l_start], %l[l_end], %l[l_handler], %l[l_block]\n\t" \
+        ".text" :::: l_start, l_end, l_handler, l_block);             \
     l_start:
 
 #define __except(filter)                                                  \
-    exception_occured = false;                                            \
-    goto l_block;                                                         \
+    l_end:                                                                \
+    __leave;                                                              \
     l_handler:                                                            \
     {                                                                     \
         EXCEPTION_POINTERS *ep;                                           \
@@ -37,9 +37,9 @@ bool exception_occured;
             "pop %%rbp\n\t"                                               \
             "ret" :: [result] "r"(result) : "%eax");                      \
     }                                                                     \
-    l_end:                                                                \
+    l_block:                                                              \
     exception_occured = true;                                             \
-    l_block:;                                                             \
+    l_skip_block:;                                                        \
 }                                                                         \
 if (exception_occured)
 
@@ -53,7 +53,7 @@ if (exception_occured)
 
 #endif
 
-#define __leave exception_occured = false; goto l_block;
+#define __leave exception_occured = false; goto l_skip_block;
 
 #define _try __try
 #define _except __except
