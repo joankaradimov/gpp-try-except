@@ -57,3 +57,4 @@ if (exception_occured)
 
 #define _try __try
 #define _except __except
+#define _leave __leave
