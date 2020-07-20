@@ -23,19 +23,13 @@ bool exception_occured;
     l_handler:                                                            \
     {                                                                     \
         EXCEPTION_POINTERS *ep;                                           \
-        __asm__ __volatile__(                                             \
-            "movq %%rcx, %0\n\t"                                          \
-            "push %%rbp\n\t"                                              \
-            "push %%rdi" : "=r"(ep) :: "%rcx");                           \
+        __asm__ __volatile__("push %%rdi" : "=c"(ep) ::);                 \
         auto er = ep->ExceptionRecord;                                    \
         auto _exception_code = [er] { return er->ExceptionCode; };        \
         auto _exception_info = [er] { return er->ExceptionInformation; }; \
-        long result = (filter);                                           \
         __asm__ __volatile__(                                             \
-            "movl %[result], %%eax\n\t"                                   \
             "pop %%rdi\n\t"                                               \
-            "pop %%rbp\n\t"                                               \
-            "ret" :: [result] "r"(result) : "%eax");                      \
+            "ret" :: "a"(filter));                      \
     }                                                                     \
     l_block:                                                              \
     exception_occured = true;                                             \
